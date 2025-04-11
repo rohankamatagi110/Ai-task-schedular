@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Personal Scheduler{% endblock %}</title>
+    {% load django_bootstrap5 %}
+    {% bootstrap_css %}
+    <!-- Add jQuery before Bootstrap JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    {% bootstrap_javascript %}
+    <style>
+        .container { padding-top: 2rem; }
+        .task-high { border-left: 5px solid #dc3545; }
+        .task-medium { border-left: 5px solid #ffc107; }
+        .task-low { border-left: 5px solid #0d6efd; }
+        .habit-card { border-left: 5px solid #198754; }
+        .completed { text-decoration: line-through; opacity: 0.7; }
+        .calendar-day { height: 100px; overflow-y: auto; }
+        .priority-badge-high { background-color: #dc3545; }
+        .priority-badge-medium { background-color: #ffc107; }
+        .priority-badge-low { background-color: #0d6efd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'tasks:home' %}">Personal Scheduler</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'tasks:home' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'tasks:task_list' %}">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'tasks:habit_list' %}">Habits</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'tasks:calendar' %}">Calendar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'tasks:chatbot' %}">Chatbot</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'account_logout' %}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'account_login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'account_signup' %}">Sign Up</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% bootstrap_messages %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer class="mt-5 py-3 bg-light text-center">
+        <div class="container">
+            <p class="text-muted mb-0">Personal Scheduler &copy; {% now "Y" %}</p>
+        </div>
+    </footer>
+</body>
+</html>

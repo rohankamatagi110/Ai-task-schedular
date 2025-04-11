@@ -1,0 +1,568 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Calendar - Personal Scheduler{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Calendar</h1>
+            <div>
+                <a href="{% url 'tasks:task_create' %}" class="btn btn-primary me-2">Add Task</a>
+                <a href="{% url 'tasks:habit_create' %}" class="btn btn-success">Add Habit</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div>
+                    <button id="prev-month" class="btn btn-sm btn-outline-light"><i class="bi bi-chevron-left"></i></button>
+                    <span id="current-month-year" class="mx-2 fw-bold">{{ current_month_year }}</span>
+                    <button id="next-month" class="btn btn-sm btn-outline-light"><i class="bi bi-chevron-right"></i></button>
+                </div>
+                <div>
+                    <button id="today-btn" class="btn btn-sm btn-outline-light">Today</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="calendar-container">
+                    <!-- Calendar will be rendered here by JavaScript -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading calendar...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Details Modal -->
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="taskModalLabel">Task Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="taskModalBody">
+                <!-- Task details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="editTaskBtn" class="btn btn-primary">Edit</a>
+                <button type="button" id="completeTaskBtn" class="btn btn-success">Mark Complete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Habit Details Modal -->
+<div class="modal fade" id="habitModal" tabindex="-1" aria-labelledby="habitModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="habitModalLabel">Habit Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="habitModalBody">
+                <!-- Habit details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="editHabitBtn" class="btn btn-primary">Edit</a>
+                <button type="button" id="completeHabitBtn" class="btn btn-success">Mark Complete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background-color: #dee2e6;
+    }
+    .calendar-header {
+        background-color: #f8f9fa;
+        text-align: center;
+        padding: 10px;
+        font-weight: bold;
+    }
+    .calendar-day {
+        background-color: white;
+        min-height: 120px;
+        padding: 5px;
+        position: relative;
+    }
+    .calendar-day.today {
+        background-color: #f0f8ff;
+    }
+    .calendar-day.other-month {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+    }
+    .day-number {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    .today .day-number {
+        background-color: #0d6efd;
+        color: white;
+        border-radius: 50%;
+    }
+    .calendar-events {
+        margin-top: 25px;
+        overflow-y: auto;
+        max-height: 90px;
+    }
+    .calendar-event {
+        padding: 2px 4px;
+        margin-bottom: 2px;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+    }
+    .calendar-event[data-task-id] {
+        cursor: grab;
+    }
+    .calendar-event[data-task-id]:active {
+        cursor: grabbing;
+    }
+    .calendar-day.drag-over {
+        background-color: #e9ecef;
+    }
+    .event-task-high {
+        background-color: #f8d7da;
+        border-left: 3px solid #dc3545;
+    }
+    .event-task-medium {
+        background-color: #fff3cd;
+        border-left: 3px solid #ffc107;
+    }
+    .event-task-low {
+        background-color: #d1e7ff;
+        border-left: 3px solid #0d6efd;
+    }
+    .event-habit {
+        background-color: #d1e7dd;
+        border-left: 3px solid #198754;
+    }
+    .event-completed {
+        text-decoration: line-through;
+        opacity: 0.7;
+    }
+</style>
+
+<script>
+    // Define currentDate in global scope so it can be accessed by all functions
+    let currentDate = new Date();
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize calendar
+        renderCalendar(currentDate);
+        
+        // Event listeners for navigation
+        document.getElementById('prev-month').addEventListener('click', function() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar(currentDate);
+        });
+        
+        document.getElementById('next-month').addEventListener('click', function() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar(currentDate);
+        });
+        
+        document.getElementById('today-btn').addEventListener('click', function() {
+            currentDate = new Date();
+            renderCalendar(currentDate);
+        });
+        
+        // Task completion button event
+        document.getElementById('completeTaskBtn').addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            if (taskId) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/tasks/${taskId}/complete/`;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+        
+        // Habit completion button event
+        document.getElementById('completeHabitBtn').addEventListener('click', function() {
+            const habitId = this.getAttribute('data-habit-id');
+            const date = this.getAttribute('data-date');
+            if (habitId && date) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/habits/${habitId}/complete/${date}/`;
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                form.appendChild(csrfInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    });
+    
+    function renderCalendar(date) {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        
+        // Update header
+        document.getElementById('current-month-year').textContent = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+        
+        // Fetch calendar data from server
+        fetch(`/api/calendar-data/?year=${date.getFullYear()}&month=${date.getMonth() + 1}`)
+            .then(response => response.json())
+            .then(data => {
+                const calendarContainer = document.getElementById('calendar-container');
+                
+                // Create calendar grid
+                let calendarHTML = '<div class="calendar-grid">';
+                
+                // Add day headers
+                dayNames.forEach(day => {
+                    calendarHTML += `<div class="calendar-header">${day}</div>`;
+                });
+                
+                // Get first day of month and last day of month
+                const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                
+                // Get the day of week for the first day (0-6, where 0 is Sunday)
+                const firstDayOfWeek = firstDay.getDay();
+                
+                // Get total days in month
+                const totalDays = lastDay.getDate();
+                
+                // Get current date for highlighting today
+                const today = new Date();
+                const isCurrentMonth = today.getMonth() === date.getMonth() && today.getFullYear() === date.getFullYear();
+                
+                // Add days from previous month to fill the first row
+                const prevMonthLastDay = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
+                for (let i = 0; i < firstDayOfWeek; i++) {
+                    const dayNumber = prevMonthLastDay - firstDayOfWeek + i + 1;
+                    calendarHTML += `
+                        <div class="calendar-day other-month">
+                            <div class="day-number">${dayNumber}</div>
+                            <div class="calendar-events"></div>
+                        </div>
+                    `;
+                }
+                
+                // Add days of current month
+                for (let day = 1; day <= totalDays; day++) {
+                    const isToday = isCurrentMonth && today.getDate() === day;
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    
+                    // Get events for this day
+                    const dayEvents = data.events.filter(event => {
+                        const eventDate = new Date(event.date);
+                        return eventDate.getDate() === day && 
+                               eventDate.getMonth() === date.getMonth() && 
+                               eventDate.getFullYear() === date.getFullYear();
+                    });
+                    
+                    calendarHTML += `
+                        <div class="calendar-day ${isToday ? 'today' : ''}" data-date="${dateStr}">
+                            <div class="day-number">${day}</div>
+                            <div class="calendar-events">
+                    `;
+                    
+                    // Add events
+                    dayEvents.forEach(event => {
+                        let eventClass = '';
+                        if (event.type === 'task') {
+                            if (event.priority === 1) eventClass = 'event-task-high';
+                            else if (event.priority === 2) eventClass = 'event-task-medium';
+                            else eventClass = 'event-task-low';
+                            
+                            if (event.completed) eventClass += ' event-completed';
+                            
+                            calendarHTML += `
+                                <div class="calendar-event ${eventClass}" 
+                                     data-bs-toggle="modal" 
+                                     data-bs-target="#taskModal" 
+                                     data-task-id="${event.id}"
+                                     draggable="true"
+                                     data-event-time="${event.time}"
+                                     data-event-date="${event.date_ymd || dateStr}">
+                                    ${event.time} ${event.title}
+                                </div>
+                            `;
+                        } else if (event.type === 'habit') {
+                            eventClass = 'event-habit';
+                            if (event.completed) eventClass += ' event-completed';
+                            
+                            calendarHTML += `
+                                <div class="calendar-event ${eventClass}" 
+                                     data-bs-toggle="modal" 
+                                     data-bs-target="#habitModal" 
+                                     data-habit-id="${event.id}" 
+                                     data-date="${dateStr}">
+                                    ${event.time} ${event.title}
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    calendarHTML += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Add days from next month to complete the grid
+                const remainingCells = 42 - (firstDayOfWeek + totalDays); // 42 = 6 rows * 7 days
+                for (let i = 1; i <= remainingCells; i++) {
+                    calendarHTML += `
+                        <div class="calendar-day other-month">
+                            <div class="day-number">${i}</div>
+                            <div class="calendar-events"></div>
+                        </div>
+                    `;
+                }
+                
+                calendarHTML += '</div>';
+                
+                // Set the HTML content
+                calendarContainer.innerHTML = calendarHTML;
+                
+                // Add drag and drop functionality for tasks
+                setupDragAndDrop();
+                
+                // Add event listeners for task modals
+                document.querySelectorAll('[data-bs-target="#taskModal"]').forEach(element => {
+                    element.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        if (taskId) {
+                            // Find task in data
+                            const task = data.events.find(event => event.type === 'task' && event.id == taskId);
+                            if (task) {
+                                // Populate modal
+                                document.getElementById('taskModalLabel').textContent = task.title;
+                                document.getElementById('taskModalBody').innerHTML = `
+                                    <p><strong>Description:</strong> ${task.description || 'No description'}</p>
+                                    <p><strong>Duration:</strong> ${task.duration} minutes</p>
+                                    <p><strong>Deadline:</strong> ${new Date(task.deadline).toLocaleString()}</p>
+                                    <p><strong>Scheduled:</strong> ${new Date(task.date).toLocaleString()}</p>
+                                    <p><strong>Priority:</strong> ${task.priority === 1 ? 'High' : (task.priority === 2 ? 'Medium' : 'Low')}</p>
+                                    <p><strong>Status:</strong> ${task.completed ? 'Completed' : 'Pending'}</p>
+                                `;
+                                
+                                // Set up buttons
+                                document.getElementById('editTaskBtn').href = `/tasks/${taskId}/edit/`;
+                                const completeBtn = document.getElementById('completeTaskBtn');
+                                completeBtn.setAttribute('data-task-id', taskId);
+                                completeBtn.textContent = task.completed ? 'Mark Incomplete' : 'Mark Complete';
+                            }
+                        }
+                    });
+                });
+                
+                // Add event listeners for habit modals
+                document.querySelectorAll('[data-bs-target="#habitModal"]').forEach(element => {
+                    element.addEventListener('click', function() {
+                        const habitId = this.getAttribute('data-habit-id');
+                        const date = this.getAttribute('data-date');
+                        if (habitId && date) {
+                            // Find habit in data
+                            const habit = data.events.find(event => event.type === 'habit' && event.id == habitId && event.date.includes(date));
+                            if (habit) {
+                                // Populate modal
+                                document.getElementById('habitModalLabel').textContent = habit.title;
+                                document.getElementById('habitModalBody').innerHTML = `
+                                    <p><strong>Description:</strong> ${habit.description || 'No description'}</p>
+                                    <p><strong>Duration:</strong> ${habit.duration} minutes</p>
+                                    <p><strong>Frequency:</strong> ${habit.frequency}</p>
+                                    <p><strong>Time:</strong> ${habit.time}</p>
+                                    <p><strong>Status for ${date}:</strong> ${habit.completed ? 'Completed' : 'Not completed'}</p>
+                                `;
+                                
+                                // Set up buttons
+                                document.getElementById('editHabitBtn').href = `/habits/${habitId}/edit/`;
+                                const completeBtn = document.getElementById('completeHabitBtn');
+                                completeBtn.setAttribute('data-habit-id', habitId);
+                                completeBtn.setAttribute('data-date', date);
+                                completeBtn.textContent = habit.completed ? 'Mark Incomplete' : 'Mark Complete';
+                            }
+                        }
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching calendar data:', error);
+                document.getElementById('calendar-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading calendar data. Please try again later.
+                    </div>
+                `;
+            });
+    }
+    // Function to set up drag and drop functionality
+    function setupDragAndDrop() {
+        let draggedTask = null;
+        let originalDate = null;
+        let originalTime = null;
+        
+        // Add event listeners to draggable task elements
+        document.querySelectorAll('.calendar-event[data-task-id]').forEach(taskElement => {
+            // Prevent modal from opening when starting drag
+            taskElement.addEventListener('dragstart', function(e) {
+                // Store the task being dragged
+                draggedTask = this.getAttribute('data-task-id');
+                originalDate = this.getAttribute('data-event-date');
+                originalTime = this.getAttribute('data-event-time');
+                
+                console.log(`Dragging task ${draggedTask} with original date ${originalDate} and time ${originalTime}`);
+                
+                // Set drag effect and data
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', draggedTask);
+                e.dataTransfer.setData('application/x-time', originalTime || '00:00');
+                
+                // Add a delay to prevent the modal from opening
+                setTimeout(() => {
+                    this.classList.add('dragging');
+                }, 0);
+                
+                // Prevent the modal from opening
+                e.stopPropagation();
+            });
+            
+            // Handle drag end
+            taskElement.addEventListener('dragend', function() {
+                this.classList.remove('dragging');
+                draggedTask = null;
+            });
+            
+            // Prevent the default click behavior during drag
+            taskElement.addEventListener('click', function(e) {
+                if (e.target.classList.contains('dragging')) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                }
+            }, true);
+        });
+        
+        // Add event listeners to calendar days (drop targets)
+        document.querySelectorAll('.calendar-day:not(.other-month)').forEach(dayElement => {
+            // Handle drag over
+            dayElement.addEventListener('dragover', function(e) {
+                e.preventDefault(); // Allow drop
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
+            // Handle drag enter
+            dayElement.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+            
+            // Handle drag leave
+            dayElement.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over');
+            });
+            
+            // Handle drop
+            dayElement.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const taskId = e.dataTransfer.getData('text/plain');
+                const newDate = this.getAttribute('data-date');
+                const time = e.dataTransfer.getData('application/x-time') || '00:00';
+                
+                if (taskId && newDate) {
+                    console.log(`Dropping task ${taskId} on date ${newDate} with time ${time}`);
+                    
+                    // Update the task's scheduled time via API
+                    updateTaskSchedule(taskId, newDate, time);
+                } else {
+                    console.error('Missing taskId or newDate for drop operation', { taskId, newDate });
+                }
+            });
+        });
+    }
+    
+    // Function to update task schedule via API
+    function updateTaskSchedule(taskId, newDate, newTime) {
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        // Create request data
+        const data = {
+            task_id: taskId,
+            new_date: newDate,
+            new_time: newTime
+        };
+        
+        console.log('Sending update request with data:', data);
+        
+        // Send API request
+        fetch('/api/update-task-schedule/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Task schedule updated successfully');
+                // Refresh the calendar to show the updated task
+                // Use the global currentDate variable to refresh the calendar
+                renderCalendar(currentDate);
+            } else {
+                console.error('Error updating task:', data.message);
+                alert('Could not update task schedule: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating task schedule:', error);
+            alert('Could not update task schedule. Please try again.');
+        });
+    }
+</script>
+{% endblock %}

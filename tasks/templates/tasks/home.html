@@ -1,0 +1,107 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Home - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Dashboard</h1>
+            <div>
+                <a href="{% url 'tasks:task_create' %}" class="btn btn-primary me-2">Add Task</a>
+                <a href="{% url 'tasks:habit_create' %}" class="btn btn-success">Add Habit</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Upcoming Tasks -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Upcoming Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_tasks %}
+                    <div class="list-group">
+                        {% for task in upcoming_tasks %}
+                            <div class="list-group-item list-group-item-action {% if task.priority == 1 %}task-high{% elif task.priority == 2 %}task-medium{% else %}task-low{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'tasks:task_detail' task.pk %}" class="text-decoration-none">{{ task.title }}</a>
+                                    </h5>
+                                    <small>
+                                        <span class="badge {% if task.priority == 1 %}priority-badge-high{% elif task.priority == 2 %}priority-badge-medium{% else %}priority-badge-low{% endif %} text-white">
+                                            {{ task.get_priority_display }}
+                                        </span>
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ task.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>Due: {{ task.deadline|date:"M d, Y - g:i A" }}</small>
+                                    <small>Scheduled: {{ task.scheduled_time|date:"M d, Y - g:i A" }}</small>
+                                </div>
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'tasks:task_complete' task.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-success">Mark Complete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No upcoming tasks for the next 7 days.</p>
+                {% endif %}
+                <div class="mt-3">
+                    <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-primary">View All Tasks</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Habits -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">Today's Habits</h5>
+            </div>
+            <div class="card-body">
+                {% if today_habits %}
+                    <div class="list-group">
+                        {% for habit in today_habits %}
+                            <div class="list-group-item list-group-item-action habit-card {% if habit.is_completed_today %}completed{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'tasks:habit_detail' habit.pk %}" class="text-decoration-none">{{ habit.title }}</a>
+                                    </h5>
+                                    <small>
+                                        <span class="badge bg-info text-white">{{ habit.get_frequency_display }}</span>
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ habit.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>Duration: {{ habit.duration }} minutes</small>
+                                    <small>Preferred time: {{ habit.preferred_time|time:"g:i A" }}</small>
+                                </div>
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'tasks:habit_complete' habit.pk now|date:'Y-m-d' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if habit.is_completed_today %}btn-outline-danger">Mark Incomplete{% else %}btn-outline-success">Mark Complete{% endif %}</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No habits scheduled for today.</p>
+                {% endif %}
+                <div class="mt-3">
+                    <a href="{% url 'tasks:habit_list' %}" class="btn btn-outline-success">View All Habits</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

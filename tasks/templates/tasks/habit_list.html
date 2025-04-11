@@ -1,0 +1,54 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Habits - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>My Habits</h1>
+            <a href="{% url 'tasks:habit_create' %}" class="btn btn-success">Add Habit</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">All Habits</h5>
+            </div>
+            <div class="card-body">
+                {% if habits %}
+                    <div class="list-group">
+                        {% for habit in habits %}
+                            <div class="list-group-item list-group-item-action habit-card">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'tasks:habit_detail' habit.pk %}" class="text-decoration-none">{{ habit.title }}</a>
+                                    </h5>
+                                    <small>
+                                        <span class="badge bg-info text-white">{{ habit.get_frequency_display }}</span>
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ habit.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>Started: {{ habit.start_date|date:"M d, Y" }}</small>
+                                    <small>Preferred time: {{ habit.preferred_time|time:"g:i A" }}</small>
+                                </div>
+                                <div class="mt-2">
+                                    <a href="{% url 'tasks:habit_detail' habit.pk %}" class="btn btn-sm btn-outline-success">View Details</a>
+                                    <a href="{% url 'tasks:habit_edit' habit.pk %}" class="btn btn-sm btn-outline-primary ms-1">Edit</a>
+                                    <a href="{% url 'tasks:habit_delete' habit.pk %}" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No habits found. Create a new habit to get started!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

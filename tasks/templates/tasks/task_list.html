@@ -1,0 +1,59 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Tasks - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>My Tasks</h1>
+            <a href="{% url 'tasks:task_create' %}" class="btn btn-primary">Add Task</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">All Tasks</h5>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                    <div class="list-group">
+                        {% for task in tasks %}
+                            <div class="list-group-item list-group-item-action {% if task.priority == 1 %}task-high{% elif task.priority == 2 %}task-medium{% else %}task-low{% endif %} {% if task.completed %}completed{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">
+                                        <a href="{% url 'tasks:task_detail' task.pk %}" class="text-decoration-none">{{ task.title }}</a>
+                                    </h5>
+                                    <small>
+                                        <span class="badge {% if task.priority == 1 %}priority-badge-high{% elif task.priority == 2 %}priority-badge-medium{% else %}priority-badge-low{% endif %} text-white">
+                                            {{ task.get_priority_display }}
+                                        </span>
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ task.description|truncatechars:100 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>Due: {{ task.deadline|date:"M d, Y - g:i A" }}</small>
+                                    <small>Scheduled: {{ task.scheduled_time|date:"M d, Y - g:i A" }}</small>
+                                </div>
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'tasks:task_complete' task.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if task.completed %}btn-outline-danger">Mark Incomplete{% else %}btn-outline-success">Mark Complete{% endif %}</button>
+                                    </form>
+                                    <a href="{% url 'tasks:task_edit' task.pk %}" class="btn btn-sm btn-outline-primary ms-1">Edit</a>
+                                    <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No tasks found. Create a new task to get started!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

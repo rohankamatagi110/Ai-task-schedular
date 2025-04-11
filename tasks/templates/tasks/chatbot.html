@@ -1,0 +1,163 @@
+{% extends 'tasks/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>AI Task Assistant</h4>
+                </div>
+                <div class="card-body">
+                    <div id="chat-messages" class="mb-3" style="height: 400px; overflow-y: auto; overflow-x: hidden;">
+                        <!-- Messages will appear here -->
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="user-message" class="form-control" placeholder="Type your message here...">
+                        <button id="send-button" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Chat styling */
+    .chat-message {
+        margin-bottom: 15px;
+        display: flex;
+    }
+    .user-message {
+        justify-content: flex-end;
+    }
+    .ai-message {
+        justify-content: flex-start;
+    }
+    .message-content {
+        max-width: 80%;
+        padding: 10px 15px;
+        border-radius: 18px;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    .user-bubble {
+        background-color: #0d6efd;
+        color: white;
+        border-top-right-radius: 5px;
+    }
+    .ai-bubble {
+        background-color: #f1f1f1;
+        color: #333;
+        border-top-left-radius: 5px;
+    }
+    .loading-bubble {
+        background-color: #e9ecef;
+        color: #333;
+        border-top-left-radius: 5px;
+    }
+    .error-bubble {
+        background-color: #dc3545;
+        color: white;
+        border-top-left-radius: 5px;
+    }
+</style>
+
+<script>
+$(document).ready(function() {
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Handle enter key press
+    $('#user-message').keypress(function(e) {
+        if (e.which === 13) { // Enter key
+            $('#send-button').click();
+            return false;
+        }
+    });
+
+    $('#send-button').click(function() {
+        const message = $('#user-message').val();
+        if (message.trim() === '') return;
+        
+        // Add user message to chat
+        $('#chat-messages').append(`
+            <div class="chat-message user-message">
+                <div class="message-content user-bubble">${message}</div>
+            </div>
+        `);
+        $('#user-message').val('');
+        
+        // Show loading indicator
+        const loadingId = 'loading-' + Date.now();
+        $('#chat-messages').append(`
+            <div id="${loadingId}" class="chat-message ai-message">
+                <div class="message-content loading-bubble">Thinking...</div>
+            </div>
+        `);
+        $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+        
+        // Debug information
+        console.log('Sending message:', message);
+        console.log('CSRF token:', csrftoken);
+        
+        // Send to backend with CSRF token
+        $.ajax({
+            url: '{% url "tasks:chatbot" %}',
+            type: 'POST',
+            data: { message: message },
+            headers: {'X-CSRFToken': csrftoken},
+            success: function(response) {
+                console.log('Response received:', response);
+                // Remove loading indicator
+                $(`#${loadingId}`).remove();
+                
+                // Add AI response to chat
+                if (response.error) {
+                    $('#chat-messages').append(`
+                        <div class="chat-message ai-message">
+                            <div class="message-content error-bubble">${response.error}</div>
+                        </div>
+                    `);
+                } else {
+                    $('#chat-messages').append(`
+                        <div class="chat-message ai-message">
+                            <div class="message-content ai-bubble">${response.message}</div>
+                        </div>
+                    `);
+                }
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX error:', status, error);
+                console.error('Response:', xhr.responseText);
+                // Remove loading indicator
+                $(`#${loadingId}`).remove();
+                
+                // Show error message
+                $('#chat-messages').append(`
+                    <div class="chat-message ai-message">
+                        <div class="message-content error-bubble">Error: ${error}</div>
+                    </div>
+                `);
+                $('#chat-messages').scrollTop($('#chat-messages')[0].scrollHeight);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

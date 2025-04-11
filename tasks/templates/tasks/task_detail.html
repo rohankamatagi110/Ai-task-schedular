@@ -1,0 +1,77 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}{{ task.title }} - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Task Details</h1>
+            <div>
+                <a href="{% url 'tasks:task_list' %}" class="btn btn-outline-secondary">Back to Tasks</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card {% if task.priority == 1 %}task-high{% elif task.priority == 2 %}task-medium{% else %}task-low{% endif %} {% if task.completed %}completed{% endif %}">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{{ task.title }}</h5>
+                <span class="badge {% if task.priority == 1 %}priority-badge-high{% elif task.priority == 2 %}priority-badge-medium{% else %}priority-badge-low{% endif %} text-white">
+                    {{ task.get_priority_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold">Description:</h6>
+                    <p>{{ task.description }}</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Due Date:</h6>
+                        <p>{{ task.deadline|date:"F d, Y - g:i A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Scheduled Time:</h6>
+                        <p>{{ task.scheduled_time|date:"F d, Y - g:i A" }}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Duration:</h6>
+                        <p>{{ task.duration }} minutes</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Status:</h6>
+                        <p>{% if task.completed %}<span class="text-success">Completed</span>{% else %}<span class="text-danger">Pending</span>{% endif %}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Created:</h6>
+                        <p>{{ task.created_at|date:"F d, Y - g:i A" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Last Updated:</h6>
+                        <p>{{ task.updated_at|date:"F d, Y - g:i A" }}</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex mt-4">
+                    <form method="post" action="{% url 'tasks:task_complete' task.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn {% if task.completed %}btn-outline-danger">Mark Incomplete{% else %}btn-outline-success">Mark Complete{% endif %}</button>
+                    </form>
+                    <a href="{% url 'tasks:task_edit' task.pk %}" class="btn btn-outline-primary ms-2">Edit</a>
+                    <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-outline-danger ms-2">Delete</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

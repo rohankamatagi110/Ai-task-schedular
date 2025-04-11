@@ -1,0 +1,39 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}Sign Out - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title text-center mb-0">Sign Out</h3>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-center mb-4">Are you sure you want to sign out?</p>
+                
+                <form method="post" action="{% url 'account_logout' %}">
+                    {% csrf_token %}
+                    {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <a href="{% url 'tasks:home' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

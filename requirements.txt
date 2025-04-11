@@ -1,0 +1,16 @@
+Django>=4.0.0
+django-bootstrap5>=23.0
+django-allauth>=0.54.0
+google-auth>=2.22.0
+google-auth-oauthlib>=1.0.0
+google-api-python-client>=2.0.0
+dateparser>=1.1.8
+spacy>=3.6.0
+transformers>=4.50.0
+torch>=2.0.0
+google-cloud-dialogflow-cx>=1.32.0
+google-generativeai>=0.8.4
+
+# Download spaCy models
+# python -m spacy download en_core_web_sm
+# python -m spacy download en_core_web_md

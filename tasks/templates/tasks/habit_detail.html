@@ -1,0 +1,48 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}{{ habit.title }} - Personal Scheduler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1>Habit Details</h1>
+            <div>
+                <a href="{% url 'tasks:habit_list' %}" class="btn btn-outline-secondary">Back to Habits</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card habit-card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">{{ habit.title }}</h5>
+                <span class="badge bg-info text-white">{{ habit.get_frequency_display }}</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold">Description:</h6>
+                    <p>{{ habit.description }}</p>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Start Date:</h6>
+                        <p>{{ habit.start_date|date:"F d, Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Preferred Time:</h6>
+                        <p>{{ habit.preferred_time|time:"g:i A" }}</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Duration:</h6>
+                        <p>{{ habit.duration }} minutes</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Frequency:
+{% endblock %}
