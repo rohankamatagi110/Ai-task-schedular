@@ -183,4 +183,4 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
 
 # Google Gemini API settings
 # Get your API key from https://aistudio.google.com/app/apikey
-GEMINI_API_KEY = "AIzaSyCzN_J_tf3hmaZJ59v3MDvrMKRk-r3AurY"  # Add your Gemini API key here
+GEMINI_API_KEY = "--------------------------------"  # Add your Gemini API key here
